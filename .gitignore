@@ -1,0 +1,10 @@
+# Media assets generated at runtime
+*.mp4
+*.mp3
+temp_*.png
+*TEMP_MPY*.mp4
+# Python cache
+__pycache__/
+*.pyc
+# Environment files
+.env
