@@ -1,41 +1,51 @@
-name: Daily AI Instagram Reel Engine
+name: Auto Post Reels to Instagram
 
 on:
   schedule:
-    # Runs everyday at 09:00 UTC
+    # 8:30 AM IST (3:00 UTC)
+    - cron: '0 3 * * *'
+    # 1:00 PM IST (7:30 UTC)
+    - cron: '30 7 * * *'
+    # 7:00 PM IST (1:30 UTC)
     - cron: '30 13 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+  
+  # Allows manual triggers from GitHub UI if needed
+  workflow_dispatch:
 
 jobs:
-  build-and-publish:
+  publish-reel:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.10'
 
-      - name: Install System Dependencies (ImageMagick & FFmpeg)
+      - name: Install System Dependencies (FFmpeg & ImageMagick)
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg imagemagick
-          # Fix ImageMagick security policy for MoviePy text rendering if needed
-          sudo sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@*"/' /etc/ImageMagick-6/policy.xml || true
+          # Fix ImageMagick security policy for MoviePic text rendering
+          sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i 's/@\*"/@" rights="read|write"/' /etc/ImageMagick-6/policy.xml || true
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run AI Reel Generation & Direct Publishing Pipeline
+      - name: Randomize Posting Time (0 - 30 Min Delay)
+        run: |
+          python -c "import time, random; delay = random.randint(0, 1800); print(f'Sleeping for {delay//60} minutes and {delay%60} seconds...'); time.sleep(delay)"
+
+      - name: Generate & Publish Reel
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
-          BUFFER_PROFILE_NAME: ${{ secrets.BUFFER_PROFILE_NAME || 'blackman_officialpage' }}
-          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID || '6a0c75a6090476fb99383a66' }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
+          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
         run: |
           python main.py
