@@ -73,49 +73,35 @@ VOICE_FILE = "voice.mp3"
 BG_MUSIC_FILE = "bg_music.mp3"
 OUTPUT_REEL_FILE = "final_reel.mp4"
 
-# High-converting creative topic pool for maximum novelty and freshness
+# High-converting creative topic pool for Blackman.in web design & development agency
 CREATIVE_TOPICS = [
     {
-        "topic": "Cinematic Color Grading & Shadow Details",
-        "hook": "Stop Crushing Your Shadows!",
-        "script": "When editing Log footage, never slap on a LUT before balancing primary exposure and white balance. Fix your dynamic range first, dial in skin tones carefully, and let the shadow details breathe naturally. This single tweak makes your footage look like Hollywood.",
-        "search_query": "color grading studio",
-        "caption": "Avoid this rookie color grading mistake! 🎬\n\nBalance before you grade for pristine dynamic range and rich shadow tones.\n\nSave this for your next video edit!\n🔗 Need elite cinematic editing? Visit Blackman.in\n\n#videoediting #colorgrading #filmmaking #cinematography #blackmanin"
+        "topic": "Why Slow Websites Destroy Sales Conversion",
+        "hook": "Your Website Is Losing Clients Daily!",
+        "script": "If you are relying only on Instagram DMs or a slow, outdated website to close deals, you are leaving serious money on the table. Modern buyers judge your credibility in three seconds flat. A custom, fast-loading website turns cold visitors into high-paying clients on autopilot. Stop losing sales to competitors. Visit Blackman.in today and let us build a website that actually grows your business!",
+        "search_query": "laptop working",
+        "caption": "Is your website actually converting visitors into clients? 🌐\n\nDon't let a slow or outdated site kill your sales.\n\n👉 Visit Blackman.in or tap the link in bio to get your custom website built today!\n\n#webdesign #webdevelopment #smallbusiness #leadgeneration #blackmanin"
     },
     {
-        "topic": "Sound Design Secrets for Maximum Retention",
-        "hook": "Sound is 70% of Your Video!",
-        "script": "Great visuals get views, but audio retention keeps people watching until the end. Always layer subtle ambient room tone, foley risers, and low frequency whooshes beneath your dialogue to build irresistible depth and momentum.",
-        "search_query": "audio mixer studio",
-        "caption": "The secret top video creators never share: Sound design makes amateur footage look Hollywood-grade. 🎧\n\nDrop a 🔥 if you want our full sound pack!\n🔗 Visit Blackman.in\n\n#sounddesign #filmmaker #videoeditor #premierepro #blackmanin"
+        "topic": "Closing Deals on Social Media vs Dedicated Website",
+        "hook": "Stop Selling Exclusively In DMs!",
+        "script": "Relying solely on social media DMs to close sales is capping your business growth. High-paying clients look for instant credibility, social proof, and seamless booking. A custom, high-converting website built by Blackman.in qualifies leads and captures revenue twenty-four-seven. Upgrade your digital storefront today at Blackman.in!",
+        "search_query": "digital agency",
+        "caption": "Stop losing high-ticket clients to messy DM conversations. 💼\n\nScale your business with an automated, custom-built website.\n\n🔗 Visit Blackman.in or tap the link in bio to get started!\n\n#webagency #businesstips #leadgeneration #growthhacks #blackmanin"
     },
     {
-        "topic": "The 4-Second Retention Cut Rule",
-        "hook": "Kill Viewer Boredom Instantly!",
-        "script": "If your short video stays on the exact same camera angle for more than four seconds, the viewer will scroll away. Cut to tight punch-ins, switch dynamic B-roll perspectives, and keep visual momentum moving continuously.",
-        "search_query": "camera lens close up",
-        "caption": "Skyrocket your average watch time with the 4-Second Rule! ⚡\n\nKeep eyes glued to the screen with dynamic camera switches.\n\n🔗 Level up your video production with Blackman.in\n\n#contentcreator #shortformcontent #reelsgrowth #videoediting #blackmanin"
+        "topic": "The 3-Second Website Credibility Test",
+        "hook": "Buyers Judge You In 3 Seconds!",
+        "script": "When potential clients search for your business, your website is your digital handshake. If it looks outdated, loads slowly, or breaks on mobile, you lose their trust instantly. Blackman.in designs modern, high-performance websites engineered to establish authority and convert traffic into booked calls. Visit Blackman.in today!",
+        "search_query": "modern office",
+        "caption": "Your website is your 24/7 sales representative. Make sure it reflects the elite quality of your work. ⚡\n\n🔗 Visit Blackman.in to upgrade your digital presence.\n\n#webdesigner #businessgrowth #websitedevelopment #branding #blackmanin"
     },
     {
-        "topic": "Lighting Hacks: Inverted Far-Side Key Light",
-        "hook": "Make Any Shot Look 10x More Cinematic!",
-        "script": "Stop lighting your subject from the camera side. Always place your primary key light on the opposite side of your camera to cast rich, cinematic shadow contrast across the subject's face and create instant dramatic dimension.",
-        "search_query": "cinematic lighting portrait",
-        "caption": "Far-side key lighting is the difference between flat amateur video and high-end cinema. 💡\n\nTry this on your next video shoot!\n🔗 Transform your brand with Blackman.in\n\n#cinematography #filmmakingtips #lightingdesign #videoproduction #blackmanin"
-    },
-    {
-        "topic": "Seamless Speed Ramping Transitions",
-        "hook": "Make Any Video Flow Like Butter!",
-        "script": "To nail seamless speed ramping transitions, match continuous camera momentum between two cuts. Accelerate into the movement, whip into the next clip, and decelerate on impact for pure kinetic magic.",
-        "search_query": "gimbal camera operator",
-        "caption": "Master speed ramping in 3 simple steps! 🚀\n\nSmooth kinetic transitions keep engagement through the roof.\n\n🔗 Custom editing workflows at Blackman.in\n\n#videoediting #speedramp #aftereffects #premierepro #blackmanin"
-    },
-    {
-        "topic": "Anamorphic Flares & Aspect Ratio Composition",
-        "hook": "Get That High-Budget Movie Look!",
-        "script": "You do not need an expensive cinema camera to look like a blockbuster film. Shoot at wide apertures, frame with leading lines, and capture subtle horizontal optical flares directly into the lens for breathtaking visual impact.",
-        "search_query": "anamorphic lens film",
-        "caption": "Turn ordinary scenes into cinematic gold with intentional framing and optical flares. 🎥\n\nDouble tap if you love cinematic visuals!\n🔗 Explore Blackman.in\n\n#filmmaking #cinematography #cameragear #director #blackmanin"
+        "topic": "Why Generic Website Builders Kill ROI",
+        "hook": "Cookie-Cutter Sites Don't Convert!",
+        "script": "Generic drag-and-drop templates are heavy, slow, and fail to turn visitors into real revenue. To dominate your market, you need custom design, clean code, and strategic conversion funnels. The engineering team at Blackman.in builds bespoke web solutions tailored for maximum ROI. Visit Blackman.in and build your high-converting site today!",
+        "search_query": "coding desk",
+        "caption": "Stand out from competitors with custom web architecture that actually drives revenue. 📈\n\n👉 Discover the Blackman.in advantage. Tap the link in bio!\n\n#webdevelopment #agency #digitalmarketing #businessstrategy #blackmanin"
     }
 ]
 
@@ -167,7 +153,7 @@ def fetch_multi_pexels_clips(query: str = "cinematic video", count: int = 6) -> 
         if response.status_code == 200:
             videos = response.json().get("videos", [])
             if len(videos) < count:
-                url_fallback = f"https://api.pexels.com/videos/search?query=cinematic+camera&orientation=portrait&per_page=20&page={random.randint(1, 3)}"
+                url_fallback = f"https://api.pexels.com/videos/search?query=coding+desk&orientation=portrait&per_page=20&page={random.randint(1, 3)}"
                 res_fb = requests.get(url_fallback, headers=headers, timeout=12)
                 if res_fb.status_code == 200:
                     videos.extend(res_fb.json().get("videos", []))
@@ -214,32 +200,52 @@ def ensure_fallback_canvas(path: str = "dummy_video.mp4", duration: int = 30) ->
     return path
 
 # ==============================================================================
-# MODULE 3: AI Script, Hook & Metadata Generation (Gemini 3.7 -> 3.6 -> 3.5 -> 3.1)
+# MODULE 3: Lead Conversion Copywriter - Web Design & Development (Blackman.in)
 # ==============================================================================
 def generate_reel_content(topic: str = "") -> dict:
     """
-    Generates a completely fresh 25-30 second script, punchy hook,
-    Pexels search query, and hashtagged caption using Gemini models in prioritized order.
+    Lead Growth Strategist for Blackman.in (web design & development agency).
+    Generates high-converting 30s Instagram Reel scripts that persuade business owners,
+    brands, and service providers that they need a modern, high-converting website built by Blackman.in.
     """
     selected_topic_seed = random.choice(CREATIVE_TOPICS)
     target_topic = topic if topic else selected_topic_seed["topic"]
 
-    print(f"\n[AI SCRIPT] Generating dynamic 30s Reel content for topic: '{target_topic}'...")
+    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("MOCK") or GEMINI_API_KEY == "MOCK_GEMINI_KEY":
+        return {
+            "hook": "Your Business Is Losing Clients Daily!",
+            "script": "If you are relying only on Instagram DMs or a slow, outdated website to close deals, you are leaving serious money on the table. Modern buyers judge your credibility in three seconds flat. A custom, fast-loading website turns cold visitors into high-paying clients on autopilot. Stop losing sales to competitors. Visit Blackman.in today and let us build a website that actually grows your business!",
+            "search_query": "laptop working",
+            "caption": "Is your website actually converting visitors into clients? 🌐\n\nDon't let a slow or outdated site kill your sales.\n\n👉 Visit Blackman.in or tap the link in bio to get your custom website built today!\n\n#webdesign #webdevelopment #smallbusiness #leadgeneration #blackmanin"
+        }
 
-    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("MOCK"):
-        print("  -> GEMINI_API_KEY not configured. Using high-converting curated viral script.")
-        return selected_topic_seed
+    print(f"\n[AI SCRIPT] Generating Blackman.in Web Agency Reel script for topic: '{target_topic}'...")
 
     prompt = f"""
-    Act as a viral video strategist and senior editor for Blackman.in.
-    Create an engaging 25-30 second Instagram Reel script for topic: '{target_topic}'.
-    Make the voiceover punchy, educational, and high-energy (approx 55-65 spoken words).
-    Return valid JSON strictly with this schema:
+    You are the Lead Growth Strategist for blackman.in — a high-end web design and development agency. 
+    Write a high-converting 30-second Instagram Reel script for topic: '{target_topic}'.
+
+    OUR TARGET AUDIENCE:
+    Small business owners, service providers, agency founders, and brands who either have no website, an ugly/outdated website, or are relying entirely on social media profiles without a dedicated sales funnel.
+
+    OUR VALUE PROPOSITION:
+    Blackman.in designs and builds modern, lightning-fast, affordable and high-converting websites that establish trust, showcase services, and capture leads automatically.
+
+    SCRIPT REQUIREMENTS:
+    1. HOOK (0-4s): High-converting scroll-stopper hitting a website/revenue pain point (Max 6 words).
+    2. SCRIPT (30s / 65-75 words):
+       - Line 1-2: Highlight the problem (e.g., losing trust, bad mobile experience, zero sales conversion).
+       - Line 3-4: Deliver the realization of why a professional website fixes this.
+       - Line 5-6: Transition to Blackman.in as the premier done-for-you web development agency.
+    3. SEARCH QUERY: 2-word Pexels search term for tech/business background clips (e.g., "coding desk", "digital agency", "modern office").
+    4. CAPTION: Persuasive copy with a clear CTA driving traffic to Blackman.in (link in bio).
+
+    Return strictly valid JSON with no extra text:
     {{
-      "hook": "Bold 4-6 word on-screen hook (e.g. 'Stop Crushing Your Shadows!')",
-      "script": "55-65 words spoken voiceover script packed with valuable editing tips",
-      "search_query": "2-word search term for Pexels vertical video (e.g. 'cinematic camera', 'color grading', 'lighting studio', 'filmmaking')",
-      "caption": "Viral Instagram caption with hook, bullet points, CTA to Blackman.in, and tags (#videoediting #colorgrading #filmmaking #blackmanin)"
+      "hook": "Bold 6-word website pain-point hook",
+      "script": "Full 30-second website sales voiceover script",
+      "search_query": "2-word search term for tech/web visuals",
+      "caption": "High-converting caption with CTA to Blackman.in"
     }}
     """
 
@@ -252,7 +258,7 @@ def generate_reel_content(topic: str = "") -> dict:
 
     for model_name in models_to_try:
         try:
-            print(f"  -> Requesting script via model: {model_name}...")
+            print(f"  -> Requesting web agency script via model: {model_name}...")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -270,7 +276,7 @@ def generate_reel_content(topic: str = "") -> dict:
                             raw_text = raw_text[4:]
                 raw_text = raw_text.strip()
                 data = json.loads(raw_text)
-                print(f"  -> Successfully generated AI Reel content via {model_name}!")
+                print(f"  -> Successfully generated Blackman.in Reel copy via {model_name}!")
                 return {
                     "hook": data.get("hook", selected_topic_seed["hook"]),
                     "script": data.get("script", selected_topic_seed["script"]),
@@ -283,7 +289,7 @@ def generate_reel_content(topic: str = "") -> dict:
             print(f"  -> Model {model_name} note: {e}")
             continue
 
-    print("  -> Using rich viral script pool.")
+    print("  -> Using high-converting Blackman.in agency script seed.")
     return selected_topic_seed
 
 # ==============================================================================
