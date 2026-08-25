@@ -4,3 +4,4 @@ moviepy
 requests
 python-dotenv
 imageio-ffmpeg
+Pillow
