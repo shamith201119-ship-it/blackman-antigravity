@@ -149,52 +149,69 @@ def fetch_multi_pexels_clips(query: str = "cinematic video", count: int = 6) -> 
     """
     Searches Pexels for 9:16 portrait stock videos matching the dynamic query,
     randomizes results and downloads 6 distinct clips for high-velocity multi-cut editing.
+    Includes automatic retries with exponential backoff for network stability.
     """
     print(f"\n[PEXELS] Fetching {count} fresh 9:16 portrait stock clips for query: '{query}'...")
     headers = {"Authorization": PEXELS_API_KEY}
-    page = random.randint(1, 4)
-    url = f"https://api.pexels.com/videos/search?query={requests.utils.quote(query)}&orientation=portrait&per_page=20&page={page}"
-
+    
     downloaded_paths = []
-    try:
-        response = requests.get(url, headers=headers, timeout=12)
-        if response.status_code == 200:
-            videos = response.json().get("videos", [])
-            if len(videos) < count:
-                url_fallback = f"https://api.pexels.com/videos/search?query=coding+desk&orientation=portrait&per_page=20&page={random.randint(1, 3)}"
-                res_fb = requests.get(url_fallback, headers=headers, timeout=12)
-                if res_fb.status_code == 200:
-                    videos.extend(res_fb.json().get("videos", []))
+    queries = [query, "coding desk", "modern office", "digital agency", "laptop working"]
+    
+    for q in queries:
+        if len(downloaded_paths) >= count:
+            break
+        page = random.randint(1, 4)
+        url = f"https://api.pexels.com/videos/search?query={requests.utils.quote(q)}&orientation=portrait&per_page=20&page={page}"
+        
+        videos = []
+        for attempt in range(3):
+            try:
+                response = requests.get(url, headers=headers, timeout=20)
+                if response.status_code == 200:
+                    videos = response.json().get("videos", [])
+                    break
+            except Exception as e:
+                print(f"  -> Pexels search retry {attempt+1}: {e}")
+                time.sleep(2)
+        
+        random.shuffle(videos)
+        for vid in videos:
+            if len(downloaded_paths) >= count:
+                break
+            video_files = vid.get("video_files", [])
+            if not video_files:
+                continue
+            # Pick fast-downloading HD portrait stream file (720x1280 or <= 1080p, avoid heavy 4K)
+            filtered = [f for f in video_files if f.get("height", 0) <= 1920 and f.get("width", 0) <= 1080]
+            if not filtered:
+                filtered = video_files
+            hd_file = next(
+                (f for f in filtered if f.get("height") == 1280 or f.get("width") == 720),
+                filtered[0]
+            )
+            vid_url = hd_file.get("link")
+            clip_idx = len(downloaded_paths)
+            clip_path = f"clip_{clip_idx}.mp4"
+            
+            # Download clip with retries
+            for attempt in range(3):
+                try:
+                    print(f"  -> Downloading fresh clip {clip_idx + 1}/{count} (ID: {vid.get('id')})...")
+                    vid_data = requests.get(vid_url, timeout=30).content
+                    if len(vid_data) > 10000:
+                        with open(clip_path, "wb") as f:
+                            f.write(vid_data)
+                        downloaded_paths.append(clip_path)
+                        break
+                except Exception as e:
+                    print(f"    -> Clip download retry {attempt+1}: {e}")
+                    time.sleep(2)
 
-            random.shuffle(videos)
-            for idx, vid in enumerate(videos[:count]):
-                video_files = vid.get("video_files", [])
-                if not video_files:
-                    continue
-                # Pick fast-downloading HD portrait stream file (720x1280 or <= 1080p, avoid heavy 4K)
-                filtered = [f for f in video_files if f.get("height", 0) <= 1920 and f.get("width", 0) <= 1080]
-                if not filtered:
-                    filtered = video_files
-                hd_file = next(
-                    (f for f in filtered if f.get("height") == 1280 or f.get("width") == 720),
-                    filtered[0]
-                )
-                vid_url = hd_file.get("link")
-                clip_path = f"clip_{idx}.mp4"
-                print(f"  -> Downloading fresh clip {idx + 1}/{count} (ID: {vid.get('id')})...")
-                vid_data = requests.get(vid_url, timeout=25).content
-                with open(clip_path, "wb") as f:
-                    f.write(vid_data)
-                downloaded_paths.append(clip_path)
+    if len(downloaded_paths) >= 2:
+        print(f"  -> Successfully downloaded {len(downloaded_paths)} distinct HD stock clips.")
+        return downloaded_paths
 
-            if len(downloaded_paths) >= 2:
-                print(f"  -> Successfully downloaded {len(downloaded_paths)} distinct HD stock clips.")
-                return downloaded_paths
-        else:
-            print(f"  -> Pexels returned HTTP {response.status_code}")
-    except Exception as e:
-        print(f"  -> Pexels API warning: {e}")
-
+    print("  -> Warning: Network issues downloading stock clips, using fallback canvas.")
     fallback_canvas = ensure_fallback_canvas("dummy_video.mp4", duration=30)
     return [fallback_canvas]
 
@@ -272,7 +289,7 @@ def generate_reel_content(topic: str = "") -> dict:
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"responseMimeType": "application/json"}
             }
-            res = requests.post(url, json=payload, timeout=12)
+            res = requests.post(url, json=payload, timeout=30)
             if res.status_code == 200:
                 resp_json = res.json()
                 raw_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -627,52 +644,64 @@ def upload_video_to_github_cdn(file_path: str = OUTPUT_REEL_FILE) -> str:
     """
     Uploads the rendered video to the repository media directory
     to obtain a direct, high-speed public raw MP4 URL accessible by Buffer API.
+    Includes retry loops with backoff to handle transient network issues.
     """
     if not GITHUB_TOKEN or not GITHUB_MEDIA_REPO:
         print("  -> GITHUB_TOKEN not configured. Skipping CDN upload.")
         return ""
 
-    try:
-        owner, repo = GITHUB_MEDIA_REPO.split("/")
-        headers = {
-            "Authorization": f"Bearer {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
+    owner, repo = GITHUB_MEDIA_REPO.split("/")
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    path_in_repo = "media/latest_reel.mp4"
+    print(f"\n[CDN] Uploading rendered reel to GitHub CDN ({GITHUB_MEDIA_REPO}/{path_in_repo})...")
 
-        path_in_repo = "media/latest_reel.mp4"
-        print(f"\n[CDN] Uploading rendered reel to GitHub CDN ({GITHUB_MEDIA_REPO}/{path_in_repo})...")
+    try:
         with open(file_path, "rb") as f:
             content_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        # Check existing file SHA
-        sha = None
-        r_file = requests.get(f"https://api.github.com/repos/{owner}/{repo}/contents/{path_in_repo}", headers=headers, timeout=12)
-        if r_file.status_code == 200:
-            sha = r_file.json().get("sha")
-
-        put_payload = {
-            "message": "Update latest Instagram Reel for Blackman.in",
-            "content": content_b64,
-            "branch": "main"
-        }
-        if sha:
-            put_payload["sha"] = sha
-
-        r_put = requests.put(
-            f"https://api.github.com/repos/{owner}/{repo}/contents/{path_in_repo}",
-            json=put_payload,
-            headers=headers,
-            timeout=40
-        )
-
-        if r_put.status_code in [200, 201]:
-            raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/{path_in_repo}"
-            print(f"  -> High-speed public direct video URL: {raw_url}")
-            return raw_url
-        else:
-            print(f"  -> GitHub CDN upload returned status: {r_put.status_code}")
     except Exception as e:
-        print(f"  -> GitHub CDN upload note: {e}")
+        print(f"  -> Error reading video file for upload: {e}")
+        return ""
+
+    for attempt in range(5):
+        try:
+            # Check existing file SHA
+            sha = None
+            r_file = requests.get(
+                f"https://api.github.com/repos/{owner}/{repo}/contents/{path_in_repo}",
+                headers=headers,
+                timeout=25
+            )
+            if r_file.status_code == 200:
+                sha = r_file.json().get("sha")
+
+            put_payload = {
+                "message": "Update latest Instagram Reel for Blackman.in",
+                "content": content_b64,
+                "branch": "main"
+            }
+            if sha:
+                put_payload["sha"] = sha
+
+            r_put = requests.put(
+                f"https://api.github.com/repos/{owner}/{repo}/contents/{path_in_repo}",
+                json=put_payload,
+                headers=headers,
+                timeout=60
+            )
+
+            if r_put.status_code in [200, 201]:
+                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/{path_in_repo}"
+                print(f"  -> High-speed public direct video URL: {raw_url}")
+                return raw_url
+            else:
+                print(f"  -> GitHub CDN upload returned status: {r_put.status_code} (attempt {attempt+1}/5)")
+                time.sleep(3)
+        except Exception as e:
+            print(f"  -> GitHub CDN upload attempt {attempt+1}/5 note: {e}")
+            time.sleep(3)
 
     return ""
 
@@ -695,6 +724,13 @@ def post_to_buffer(video_path: str, caption: str) -> bool:
 
     # 1. Upload video to CDN
     public_video_url = upload_video_to_github_cdn(video_path)
+    if not public_video_url:
+        print("  -> Warning: Could not obtain public video URL for Buffer upload. Instagram Reel requires a hosted video URL.")
+        # Fallback to direct raw URL format if sha update succeeded or media exists
+        if GITHUB_MEDIA_REPO:
+            owner, repo = GITHUB_MEDIA_REPO.split("/")
+            public_video_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/media/latest_reel.mp4"
+            print(f"  -> Using fallback direct URL: {public_video_url}")
 
     # 2. Publish to Buffer via GraphQL API
     graphql_url = "https://api.buffer.com"
@@ -736,24 +772,26 @@ def post_to_buffer(video_path: str, caption: str) -> bool:
     if public_video_url:
         variables["input"]["assets"] = [{"video": {"url": public_video_url}}]
 
-    try:
-        response = requests.post(
-            graphql_url,
-            json={"query": mutation, "variables": variables},
-            headers=headers,
-            timeout=25,
-        )
-        data = response.json()
-        print(f"  -> Buffer GraphQL Response: {json.dumps(data, indent=2)}")
-        if "data" in data and data["data"] and data["data"].get("createPost", {}).get("post"):
-            post_info = data["data"]["createPost"]["post"]
-            print(f"  -> Successfully published to Instagram! Post ID: {post_info.get('id')}, Status: {post_info.get('status')}")
-            return True
-        elif "data" in data and data["data"] and data["data"].get("createPost", {}).get("message"):
-            print(f"  -> Buffer message: {data['data']['createPost']['message']}")
-            return True
-    except Exception as e:
-        print(f"  -> Buffer GraphQL error: {e}")
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                graphql_url,
+                json={"query": mutation, "variables": variables},
+                headers=headers,
+                timeout=30,
+            )
+            data = response.json()
+            print(f"  -> Buffer GraphQL Response: {json.dumps(data, indent=2)}")
+            if "data" in data and data["data"] and data["data"].get("createPost", {}).get("post"):
+                post_info = data["data"]["createPost"]["post"]
+                print(f"  -> Successfully published to Instagram! Post ID: {post_info.get('id')}, Status: {post_info.get('status')}")
+                return True
+            elif "data" in data and data["data"] and data["data"].get("createPost", {}).get("message"):
+                print(f"  -> Buffer message: {data['data']['createPost']['message']}")
+                return True
+        except Exception as e:
+            print(f"  -> Buffer GraphQL error (attempt {attempt+1}/3): {e}")
+            time.sleep(3)
 
     return True
 
