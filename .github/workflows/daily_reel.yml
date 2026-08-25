@@ -2,14 +2,10 @@ name: Auto Post Reels to Instagram
 
 on:
   schedule:
-    # 8:30 AM IST (3:00 UTC)
-    - cron: '0 3 * * *'
-    # 1:00 PM IST (7:30 UTC)
-    - cron: '30 7 * * *'
-    # 7:00 PM IST (1:30 UTC)
+    # 7:00 PM IST (1:30 PM UTC) — only schedule, with 0-30 min random delay
     - cron: '30 13 * * *'
-  
-  # Allows manual triggers from GitHub UI if needed
+
+  # Allows manual triggers from GitHub UI
   workflow_dispatch:
 
 jobs:
@@ -17,20 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install System Dependencies (FFmpeg & ImageMagick)
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg imagemagick
-          # Fix ImageMagick security policy for MoviePic text rendering
+          # Fix ImageMagick security policy for text rendering
           sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
-          sudo sed -i 's/@\*"/@" rights="read|write"/' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i '/<policy domain="coder" rights="none" pattern="[A-Z]*"/d' /etc/ImageMagick-6/policy.xml || true
 
       - name: Install Python Dependencies
         run: |
@@ -45,7 +41,9 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
-          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_MEDIA_REPO: ${{ secrets.GITHUB_MEDIA_REPO }}
         run: |
           python main.py
