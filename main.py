@@ -12,9 +12,11 @@ Automated Daily Pipeline:
 """
 
 import os
+import gc
 import sys
 import glob
 import json
+import time
 import base64
 import random
 import asyncio
@@ -42,6 +44,7 @@ try:
         CompositeAudioClip,
         ImageClip,
         ColorClip,
+        TextClip,
     )
 except ImportError:
     from moviepy.editor import (
@@ -53,6 +56,7 @@ except ImportError:
         CompositeAudioClip,
         ImageClip,
         ColorClip,
+        TextClip,
     )
 
 import edge_tts
@@ -116,14 +120,18 @@ MUSIC_URLS = [
 # MODULE 1: Royalty-Free Background Music Fetcher
 # ==============================================================================
 def ensure_bg_music(output_path: str = BG_MUSIC_FILE) -> str:
-    """Downloads or verifies a fresh royalty-free ambient background music track."""
-    if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
-        return output_path
+    """Downloads a fresh royalty-free ambient background music track every run."""
+    # Always delete existing to guarantee fresh music each run
+    if os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except Exception:
+            pass
 
-    print("[BG MUSIC] Downloading royalty-free ambient background track...")
+    print("[BG MUSIC] Downloading fresh royalty-free ambient background track...")
     url = random.choice(MUSIC_URLS)
     try:
-        res = requests.get(url, timeout=15)
+        res = requests.get(url, timeout=30)
         if res.status_code == 200 and len(res.content) > 1000:
             with open(output_path, "wb") as f:
                 f.write(res.content)
@@ -387,7 +395,9 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
     Composites the 25-30 second multi-clip Instagram Reel:
     - 6 distinct 9:16 vertical HD stock clips
     - Crisp neural voiceover + volume-ducked background music (8% volume)
-    - High-contrast visual hook banner
+    - High-contrast visual hook banner (first 4 seconds)
+    - Logo watermark overlay (top-right corner, if logo.png exists)
+    - Permanent CTA text banner at bottom
     - 1080x1920 30fps MP4 output
     """
     print(f"\n[COMPOSITOR] Rendering multi-clip Instagram Reel to '{output_path}'...")
@@ -395,45 +405,58 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
     # 1. Synthesize Voiceover
     asyncio.run(create_voiceover(data["script"], VOICE_FILE))
     voice_audio = AudioFileClip(VOICE_FILE)
-    total_duration = voice_audio.duration
-    print(f"  -> Spoken Audio Duration: {total_duration:.2f} seconds")
+    target_duration = voice_audio.duration
+    print(f"  -> Spoken Audio Duration: {target_duration:.2f} seconds")
 
     # 2. Fetch 6 distinct portrait clips from Pexels
     query = data.get("search_query", "cinematic camera")
     clip_paths = fetch_multi_pexels_clips(query=query, count=6)
 
     # 3. Process and align multi-clips to target duration
-    clip_target_dur = total_duration / max(len(clip_paths), 1)
+    clip_duration = target_duration / max(len(clip_paths), 1)
     processed_clips = []
     for path in clip_paths:
         try:
             c = VideoFileClip(path)
             # Loop clip if shorter than target slice
-            if c.duration < clip_target_dur:
-                repeats = int(clip_target_dur // c.duration) + 1
+            if c.duration < clip_duration:
+                repeats = int(clip_duration // c.duration) + 1
                 c = concatenate_videoclips([c] * repeats)
 
             if hasattr(c, "subclipped"):
-                c = c.subclipped(0, clip_target_dur)
+                c = c.subclipped(0, clip_duration)
             elif hasattr(c, "subclip"):
-                c = c.subclip(0, clip_target_dur)
+                c = c.subclip(0, clip_duration)
 
-            # Resize directly to 1080x1920 canvas
-            c = c.resized(new_size=(1080, 1920))
+            # Resize height to 1920, crop width if > 1080
+            orig_w, orig_h = c.size
+            scale_factor = 1920 / orig_h
+            new_w = int(orig_w * scale_factor)
+            c = c.resized(new_size=(new_w, 1920))
+            if new_w > 1080:
+                x_center = new_w // 2
+                x1 = x_center - 540
+                if hasattr(c, "cropped"):
+                    c = c.cropped(x1=x1, y1=0, x2=x1 + 1080, y2=1920)
+                else:
+                    c = c.crop(x1=x1, y1=0, x2=x1 + 1080, y2=1920)
+            elif new_w < 1080:
+                c = c.resized(new_size=(1080, 1920))
+
             processed_clips.append(c)
         except Exception as e:
             print(f"  -> Warning processing clip {path}: {e}")
 
     if not processed_clips:
-        fb_path = ensure_fallback_canvas("dummy_video.mp4", duration=int(total_duration) + 1)
+        fb_path = ensure_fallback_canvas("dummy_video.mp4", duration=int(target_duration) + 1)
         c = VideoFileClip(fb_path)
         processed_clips.append(c)
 
-    video_track = concatenate_videoclips(processed_clips, method="chain")
-    if hasattr(video_track, "subclipped"):
-        video_track = video_track.subclipped(0, total_duration)
-    elif hasattr(video_track, "subclip"):
-        video_track = video_track.subclip(0, total_duration)
+    final_video_track = concatenate_videoclips(processed_clips, method="compose")
+    if hasattr(final_video_track, "subclipped"):
+        final_video_track = final_video_track.subclipped(0, target_duration)
+    elif hasattr(final_video_track, "subclip"):
+        final_video_track = final_video_track.subclip(0, target_duration)
 
     # 4. Mix Background Music (Ducked at 8% volume under voiceover)
     bg_music_file = ensure_bg_music()
@@ -445,14 +468,14 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
             elif hasattr(bg_audio, "volumex"):
                 bg_audio = bg_audio.volumex(0.08)
 
-            if bg_audio.duration < total_duration:
-                repeats = int(total_duration // bg_audio.duration) + 1
+            if bg_audio.duration < target_duration:
+                repeats = int(target_duration // bg_audio.duration) + 1
                 bg_audio = concatenate_audioclips([bg_audio] * repeats)
 
             if hasattr(bg_audio, "subclipped"):
-                bg_audio = bg_audio.subclipped(0, total_duration)
+                bg_audio = bg_audio.subclipped(0, target_duration)
             elif hasattr(bg_audio, "subclip"):
-                bg_audio = bg_audio.subclip(0, total_duration)
+                bg_audio = bg_audio.subclip(0, target_duration)
 
             combined_audio = CompositeAudioClip([voice_audio, bg_audio])
         except Exception as e:
@@ -461,16 +484,104 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
     else:
         combined_audio = voice_audio
 
-    # 5. Visual Hook Banner
-    hook_clip = create_hook_overlay(data["hook"], duration=min(4.5, total_duration))
+    # 5. Visual Hook Banner (first 4 seconds)
+    hook_clip = create_hook_overlay(data["hook"], duration=min(4.0, target_duration))
 
-    final_reel = CompositeVideoClip([video_track, hook_clip], size=(1080, 1920))
-    if hasattr(final_reel, "with_audio"):
-        final_reel = final_reel.with_audio(combined_audio).with_duration(total_duration)
+    # 6. Bottom CTA Text Banner (permanent, full duration)
+    cta_text = "See caption for website link | Blackman.in"
+    try:
+        txt_bottom_cta = TextClip(
+            text=cta_text,
+            font_size=40,
+            color="white",
+            bg_color="rgb(50,50,50)",
+            font="Arial-Bold",
+            size=(1080, None),
+            method="caption",
+        )
+        if hasattr(txt_bottom_cta, "with_duration"):
+            txt_bottom_cta = txt_bottom_cta.with_duration(target_duration)
+        else:
+            txt_bottom_cta = txt_bottom_cta.set_duration(target_duration)
+        if hasattr(txt_bottom_cta, "with_position"):
+            txt_bottom_cta = txt_bottom_cta.with_position(("center", 1700))
+        else:
+            txt_bottom_cta = txt_bottom_cta.set_position(("center", 1700))
+        print("  -> CTA banner overlay created.")
+    except Exception as e:
+        print(f"  -> CTA banner note (using Pillow fallback): {e}")
+        # Fallback: create CTA using Pillow
+        cta_img = Image.new("RGBA", (1080, 70), (50, 50, 50, 220))
+        cta_draw = ImageDraw.Draw(cta_img)
+        cta_font = None
+        for f in ["arialbd.ttf", "Arial-Bold.ttf", "seguisb.ttf", "calibrib.ttf", "arial.ttf"]:
+            try:
+                cta_font = ImageFont.truetype(f, 34)
+                break
+            except Exception:
+                continue
+        if cta_font is None:
+            cta_font = ImageFont.load_default()
+        bbox = cta_draw.textbbox((0, 0), cta_text, font=cta_font)
+        tw = bbox[2] - bbox[0]
+        tx = (1080 - tw) // 2
+        cta_draw.text((tx, 15), cta_text, font=cta_font, fill=(255, 255, 255, 255))
+        cta_path = "temp_cta_banner.png"
+        cta_img.save(cta_path, format="PNG")
+        txt_bottom_cta = ImageClip(cta_path)
+        if hasattr(txt_bottom_cta, "with_duration"):
+            txt_bottom_cta = txt_bottom_cta.with_duration(target_duration)
+        else:
+            txt_bottom_cta = txt_bottom_cta.set_duration(target_duration)
+        if hasattr(txt_bottom_cta, "with_position"):
+            txt_bottom_cta = txt_bottom_cta.with_position(("center", 1700))
+        else:
+            txt_bottom_cta = txt_bottom_cta.set_position(("center", 1700))
+
+    # 7. Logo Watermark Overlay (top-right corner, if logo.png exists)
+    logo_clip = None
+    if os.path.exists("logo.png"):
+        try:
+            print("  -> Loading logo.png for watermark overlay...")
+            logo_clip = ImageClip("logo.png")
+            # Resize to width 150px maintaining aspect ratio
+            logo_w, logo_h = logo_clip.size
+            scale = 150 / logo_w
+            new_logo_h = int(logo_h * scale)
+            logo_clip = logo_clip.resized(new_size=(150, new_logo_h))
+            # Apply 85% opacity
+            if hasattr(logo_clip, "with_opacity"):
+                logo_clip = logo_clip.with_opacity(0.85)
+            elif hasattr(logo_clip, "set_opacity"):
+                logo_clip = logo_clip.set_opacity(0.85)
+            # Set duration and position
+            if hasattr(logo_clip, "with_duration"):
+                logo_clip = logo_clip.with_duration(target_duration)
+            else:
+                logo_clip = logo_clip.set_duration(target_duration)
+            if hasattr(logo_clip, "with_position"):
+                logo_clip = logo_clip.with_position(("right", 50))
+            else:
+                logo_clip = logo_clip.set_position(("right", 50))
+            print(f"  -> Logo watermark loaded (150x{new_logo_h}px, 85% opacity, top-right).")
+        except Exception as e:
+            print(f"  -> Logo overlay note: {e}")
+            logo_clip = None
     else:
-        final_reel = final_reel.set_audio(combined_audio).set_duration(total_duration)
+        print("  -> No logo.png found, skipping watermark overlay.")
 
-    # 6. Render Output Video with ultrafast preset for maximum stability and speed
+    # 8. Assemble all overlay elements
+    overlay_elements = [final_video_track, hook_clip, txt_bottom_cta]
+    if logo_clip is not None:
+        overlay_elements.append(logo_clip)
+
+    final_reel = CompositeVideoClip(overlay_elements, size=(1080, 1920))
+    if hasattr(final_reel, "with_audio"):
+        final_reel = final_reel.with_audio(combined_audio).with_duration(target_duration)
+    else:
+        final_reel = final_reel.set_audio(combined_audio).set_duration(target_duration)
+
+    # 9. Render Output Video with ultrafast preset for maximum stability and speed
     final_reel.write_videofile(
         output_path,
         fps=30,
@@ -483,9 +594,12 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
     )
 
     try:
-        video_track.close()
+        final_video_track.close()
         voice_audio.close()
         hook_clip.close()
+        txt_bottom_cta.close()
+        if logo_clip:
+            logo_clip.close()
         final_reel.close()
         for c in processed_clips:
             try:
@@ -495,11 +609,13 @@ def render_reel(data: dict, output_path: str = OUTPUT_REEL_FILE) -> str:
     except Exception:
         pass
 
-    if os.path.exists("temp_hook_overlay.png"):
-        try:
-            os.remove("temp_hook_overlay.png")
-        except Exception:
-            pass
+    # Clean up temporary overlay files
+    for tmp_file in ["temp_hook_overlay.png", "temp_cta_banner.png"]:
+        if os.path.exists(tmp_file):
+            try:
+                os.remove(tmp_file)
+            except Exception:
+                pass
 
     print(f"  -> Pro Reel Rendered Successfully: {output_path} ({os.path.getsize(output_path)} bytes)")
     return output_path
@@ -646,10 +762,15 @@ def post_to_buffer(video_path: str, caption: str) -> bool:
 # ==============================================================================
 def cleanup_assets():
     """
-    Deletes all temporary media files immediately upon upload completion
-    to guarantee zero leftover disk footprint and ensure fresh assets every time.
+    Deletes all temporary media files with retry logic for Windows file locks.
+    Runs gc.collect() first to release moviepy/ffmpeg file handles.
     """
     print("\n[CLEANUP] Removing temporary media assets to maintain fresh workspace...")
+
+    # Force garbage collection to release file handles held by moviepy/ffmpeg
+    gc.collect()
+    time.sleep(2)  # Brief pause to let OS release handles
+
     patterns = [
         "clip_*.mp4",
         "voice.mp3",
@@ -662,18 +783,62 @@ def cleanup_assets():
         "temp_audio.m4a",
         "*TEMP_MPY*.mp4",
         "temp_*.png",
+        "temp_cta_banner.png",
     ]
     deleted_count = 0
+    failed_files = []
     for pat in patterns:
+        for fpath in glob.glob(pat):
+            removed = False
+            for attempt in range(3):
+                try:
+                    os.remove(fpath)
+                    deleted_count += 1
+                    print(f"  -> Removed: {fpath}")
+                    removed = True
+                    break
+                except Exception:
+                    gc.collect()
+                    time.sleep(1)
+            if not removed:
+                failed_files.append(fpath)
+                print(f"  -> Could not remove (will retry next run): {fpath}")
+
+    print(f"  -> Asset cleanup complete ({deleted_count} files removed, {len(failed_files)} locked).")
+
+
+def pre_cleanup():
+    """
+    Runs BEFORE each pipeline execution to nuke any stale assets from previous runs.
+    Ensures every run starts with a completely clean workspace.
+    """
+    print("\n[PRE-CLEANUP] Ensuring clean workspace — removing stale assets from previous runs...")
+    stale_patterns = [
+        "clip_*.mp4",
+        "voice.mp3",
+        "bg_music.mp3",
+        "bg_music.wav",
+        "downloaded_bg.mp4",
+        "dummy_video.mp4",
+        "final_reel.mp4",
+        "output_reel.mp4",
+        "temp_audio.m4a",
+        "*TEMP_MPY*.mp4",
+        "temp_*.png",
+        "temp_cta_banner.png",
+    ]
+    removed = 0
+    for pat in stale_patterns:
         for fpath in glob.glob(pat):
             try:
                 os.remove(fpath)
-                deleted_count += 1
-                print(f"  -> Removed: {fpath}")
-            except Exception as e:
-                print(f"  -> Note removing {fpath}: {e}")
-
-    print(f"  -> Asset cleanup complete ({deleted_count} files removed). Ready for next autonomous run!")
+                removed += 1
+            except Exception:
+                pass
+    if removed:
+        print(f"  -> Removed {removed} stale files from previous run.")
+    else:
+        print("  -> Workspace already clean.")
 
 # ==============================================================================
 # MAIN PIPELINE ENTRYPOINT
@@ -685,6 +850,9 @@ def main():
     print("=" * 65)
 
     custom_topic = sys.argv[1] if len(sys.argv) > 1 else ""
+
+    # Step 0: Pre-cleanup — nuke any stale assets from previous runs
+    pre_cleanup()
 
     # Step 1: AI Topic & Script Generation (prioritizes 3.7 flash -> 3.6 -> 3.5 -> 3.1)
     content = generate_reel_content(custom_topic)
