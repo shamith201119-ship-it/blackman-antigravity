@@ -1,10 +1,18 @@
 # Media assets generated at runtime
 *.mp4
 *.mp3
+*.wav
+*.m4a
 temp_*.png
-*TEMP_MPY*.mp4
+*TEMP_MPY*
+
 # Python cache
 __pycache__/
 *.pyc
+
 # Environment files
 .env
+
+# OS files
+.DS_Store
+Thumbs.db
