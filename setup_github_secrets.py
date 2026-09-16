@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PAT = os.getenv("GITHUB_TOKEN", "GITHUB_TOKEN_REMOVED")
+PAT = os.getenv("GITHUB_TOKEN")
 REPO = os.getenv("GITHUB_MEDIA_REPO", "shamith201119-ship-it/blackman-antigravity")
 
 headers = {
