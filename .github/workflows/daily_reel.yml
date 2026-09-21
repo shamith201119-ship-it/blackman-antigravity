@@ -1,9 +1,12 @@
 name: Daily Reel Generation
+concurrency:
+  group: daily-reel
+  cancel-in-progress: true
 
 on:
   schedule:
-    # 7 PM local (UTC+5:30) => 13:30 UTC daily
-    - cron: "30 13 * * *"
+    # 7:10 PM local (UTC+5:30) => 13:40 UTC daily
+    - cron: "40 13 * * *"
   workflow_dispatch:  # manual trigger for testing
 
 jobs:
