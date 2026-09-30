@@ -303,9 +303,16 @@ Return strictly valid JSON with no markdown wrapping:
             except Exception as e:
                 print(f"  -> xAI Grok {grk_model} note: {e}")
 
-    # 3. Try Google Gemini (Latest: gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash -> gemini-2.5-pro)
+    # 3. Try Google Gemini (gemini-3.8-flash -> gemini-3.7-flash -> gemini-3.6-flash -> gemini-3.1-pro -> gemini-2.5-flash -> gemini-2.0-flash)
     if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("MOCK"):
-        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        gemini_models = [
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.1-pro",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+        ]
         for gemini_model in gemini_models:
             try:
                 print(f"  -> Requesting script via Google {gemini_model}...")
