@@ -65,6 +65,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 # CONFIGURATION & ENVIRONMENT VARIABLES
 # ==============================================================================
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROK_API_KEY = os.getenv("GROK_API_KEY") or os.getenv("XAI_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "8dxdiukk0XTSLx87LsZFIIoHSQgAxukiYtdbcEbdtToDOAfalFw4OCNI")
 BUFFER_ACCESS_TOKEN = os.getenv("BUFFER_ACCESS_TOKEN", "")
@@ -225,42 +226,87 @@ Return strictly valid JSON with no markdown wrapping:
   "caption": "string"
 }}"""
 
-    # 1. Try Groq (Ultra-fast Llama-3.3-70B)
+    # 1. Try Groq Cloud (Latest fast open models: LLaMA 3.3 70B -> DeepSeek R1 Distill -> Qwen 2.5 -> LLaMA 3.1 8B)
     if GROQ_API_KEY and not GROQ_API_KEY.startswith("your_"):
-        try:
-            print("  -> Requesting script via Groq LLaMA-3.3-70B...")
-            headers = {
-                "Authorization": f"Bearer {GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": "You are a professional viral Instagram video copywriter. Always output strictly valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.8,
-                "max_tokens": 800
-            }
-            res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=20)
-            if res.status_code == 200:
-                data = json.loads(res.json()["choices"][0]["message"]["content"])
-                print("  -> Successfully generated via Groq LLaMA-3.3-70B!")
-                return {
-                    "hook": data.get("hook", selected_seed["hook"]),
-                    "script": data.get("script", selected_seed["script"]),
-                    "search_queries": data.get("search_queries", selected_seed["search_queries"]),
-                    "caption": data.get("caption", selected_seed["caption"]),
+        groq_models = [
+            "llama-3.3-70b-versatile",
+            "deepseek-r1-distill-llama-70b",
+            "qwen-2.5-32b",
+            "llama-3.1-8b-instant",
+        ]
+        for g_model in groq_models:
+            try:
+                print(f"  -> Requesting script via Groq ({g_model})...")
+                headers = {
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
                 }
-            else:
-                print(f"  -> Groq returned status {res.status_code}: {res.text[:100]}")
-        except Exception as e:
-            print(f"  -> Groq generation note: {e}")
+                payload = {
+                    "model": g_model,
+                    "messages": [
+                        {"role": "system", "content": "You are a professional viral Instagram video copywriter. Always output strictly valid JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.8,
+                    "max_tokens": 800
+                }
+                res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=20)
+                if res.status_code == 200:
+                    data = json.loads(res.json()["choices"][0]["message"]["content"])
+                    print(f"  -> Successfully generated via Groq ({g_model})!")
+                    return {
+                        "hook": data.get("hook", selected_seed["hook"]),
+                        "script": data.get("script", selected_seed["script"]),
+                        "search_queries": data.get("search_queries", selected_seed["search_queries"]),
+                        "caption": data.get("caption", selected_seed["caption"]),
+                    }
+                else:
+                    print(f"  -> Groq {g_model} status {res.status_code}: {res.text[:80]}")
+            except Exception as e:
+                print(f"  -> Groq {g_model} note: {e}")
 
-    # 2. Try Gemini 2.0 Flash
+    # 2. Try xAI Grok (grok-beta -> grok-2-latest -> grok-2)
+    if GROK_API_KEY and not GROK_API_KEY.startswith("your_"):
+        grok_models = ["grok-beta", "grok-2-latest", "grok-2"]
+        for grk_model in grok_models:
+            try:
+                print(f"  -> Requesting script via xAI Grok ({grk_model})...")
+                headers = {
+                    "Authorization": f"Bearer {GROK_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": grk_model,
+                    "messages": [
+                        {"role": "system", "content": "You are a professional viral Instagram video copywriter. Always output strictly valid JSON with no markdown wrapping."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.8,
+                }
+                res = requests.post("https://api.x.ai/v1/chat/completions", headers=headers, json=payload, timeout=25)
+                if res.status_code == 200:
+                    raw_text = res.json()["choices"][0]["message"]["content"].strip()
+                    if raw_text.startswith("```"):
+                        parts = raw_text.split("```")
+                        raw_text = parts[1][4:] if parts[1].startswith("json") else parts[1]
+                    data = json.loads(raw_text.strip())
+                    print(f"  -> Successfully generated via xAI Grok ({grk_model})!")
+                    return {
+                        "hook": data.get("hook", selected_seed["hook"]),
+                        "script": data.get("script", selected_seed["script"]),
+                        "search_queries": data.get("search_queries", selected_seed["search_queries"]),
+                        "caption": data.get("caption", selected_seed["caption"]),
+                    }
+                else:
+                    print(f"  -> xAI Grok {grk_model} status {res.status_code}: {res.text[:80]}")
+            except Exception as e:
+                print(f"  -> xAI Grok {grk_model} note: {e}")
+
+    # 3. Try Google Gemini (Latest: gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash -> gemini-2.5-pro)
     if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("MOCK"):
-        for gemini_model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        for gemini_model in gemini_models:
             try:
                 print(f"  -> Requesting script via Google {gemini_model}...")
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={GEMINI_API_KEY}"
@@ -282,10 +328,12 @@ Return strictly valid JSON with no markdown wrapping:
                         "search_queries": data.get("search_queries", selected_seed["search_queries"]),
                         "caption": data.get("caption", selected_seed["caption"]),
                     }
+                else:
+                    print(f"  -> Google {gemini_model} status {res.status_code}: {res.text[:80]}")
             except Exception as e:
                 print(f"  -> Gemini model {gemini_model} note: {e}")
 
-    # 3. Deterministic date-based fallback
+    # 4. Deterministic date-based fallback
     print(f"  -> Using curated high-converting date-rotated topic for today: '{selected_seed['topic']}'")
     return selected_seed
 
