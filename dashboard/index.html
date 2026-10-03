@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackman.in — Reel Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0c10;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: #111318;
+    border: 1px solid #1e2430;
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .logo-dot {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #ffe600, #ff8800);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 12px; color: #556; margin-top: 1px; }
+
+  .run-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ffe600 0%, #ff9900 100%);
+    color: #0a0c10;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .run-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,200,0,0.3); }
+  .run-btn:disabled {
+    background: #1e2430;
+    color: #445;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .run-btn .spinner {
+    width: 20px; height: 20px;
+    border: 3px solid rgba(0,0,0,0.3);
+    border-top-color: #0a0c10;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  .run-btn.loading .spinner { display: block; }
+
+  .status-bar {
+    margin-top: 24px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-bar.show { display: flex; }
+  .status-bar.running { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.2); color: #60a5fa; }
+  .status-bar.success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.2); color: #4ade80; }
+  .status-bar.failed { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.2); color: #f87171; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .status-dot.pulse { animation: pulse 1.2s ease-in-out infinite; }
+
+  .timeline {
+    margin-top: 24px;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+  }
+  .timeline.show { display: flex; }
+  .timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    position: relative;
+  }
+  .timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 34px;
+    bottom: -12px;
+    width: 2px;
+    background: #1e2430;
+  }
+  .tl-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+    z-index: 1;
+    border: 2px solid #1e2430;
+    background: #111318;
+    color: #334;
+    transition: all 0.3s;
+  }
+  .tl-icon.done { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #4ade80; }
+  .tl-icon.active { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #60a5fa; animation: ring 1.5s ease-in-out infinite; }
+  .tl-icon.failed { background: rgba(239,68,68,0.15); border-color: #ef4444; color: #f87171; }
+  .tl-info { flex: 1; }
+  .tl-name { font-size: 14px; font-weight: 600; color: #c8d0dc; }
+  .tl-name.active { color: #93c5fd; }
+  .tl-name.done { color: #86efac; }
+  .tl-name.failed { color: #fca5a5; }
+  .tl-status { font-size: 11px; color: #445; margin-top: 2px; }
+  .tl-status.active { color: #3b82f6; }
+  .tl-status.done { color: #22c55e; }
+  .tl-status.failed { color: #ef4444; }
+
+  .divider { border: none; border-top: 1px solid #1a1f2a; margin: 24px 0; }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #334;
+    margin-top: 4px;
+  }
+  .meta-link { color: #60a5fa; text-decoration: none; }
+  .meta-link:hover { text-decoration: underline; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  @keyframes ring { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-row">
+    <div class="logo-dot">⚡</div>
+    <div>
+      <div class="logo-text">Blackman.in</div>
+      <div class="logo-sub">Reel Automation Dashboard</div>
+    </div>
+  </div>
+
+  <button class="run-btn" id="runBtn" onclick="triggerReel()">
+    <div class="spinner" id="spinner"></div>
+    <span id="btnText">▶  Post Reel Now</span>
+  </button>
+
+  <div class="status-bar" id="statusBar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusMsg">Starting pipeline...</span>
+  </div>
+
+  <div class="timeline" id="timeline"></div>
+
+  <hr class="divider">
+  <div class="meta-row">
+    <span>@blackman_officialpage</span>
+    <a class="meta-link" href="https://github.com/shamith201119-ship-it/blackman-antigravity/actions" target="_blank">View Logs →</a>
+  </div>
+</div>
+
+<script src="/api/config"></script>
+<script>
+const GH_TOKEN = window.__GH_TOKEN__ || '';
+const REPO = 'shamith201119-ship-it/blackman-antigravity';
+const WORKFLOW = 'daily_reel.yml';
+
+let pollInterval = null;
+let currentRunId = null;
+
+const STEP_LABELS = {
+  'Set up job': { icon: '⚙️', label: 'Set Up Runner' },
+  'Checkout repository': { icon: '📂', label: 'Checkout Code' },
+  'Set up Python': { icon: '🐍', label: 'Setup Python 3.12' },
+  'Install dependencies': { icon: '📦', label: 'Install Libraries' },
+  'Run Reel Engine': { icon: '🎬', label: 'Generate & Post Reel' },
+  'Post Set up Python': { icon: '🧹', label: 'Cleanup' },
+  'Complete job': { icon: '✅', label: 'Pipeline Complete' },
+};
+
+function ghHeaders() {
+  return {
+    'Authorization': `Bearer ${GH_TOKEN}`,
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'Blackman-Dashboard'
+  };
+}
+
+async function triggerReel() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  document.getElementById('btnText').textContent = 'Starting...';
+  document.getElementById('spinner').style.display = 'block';
+
+  setStatus('running', 'Triggering GitHub Actions workflow...');
+  clearTimeline();
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+      { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: 'main' }) }
+    );
+
+    if (res.status !== 204) throw new Error(`Failed to trigger: ${res.status}`);
+
+    setStatus('running', 'Workflow triggered! Waiting for runner...');
+    await new Promise(r => setTimeout(r, 5000));
+    startPolling();
+  } catch (e) {
+    setStatus('failed', 'Failed to trigger: ' + e.message);
+    resetBtn();
+  }
+}
+
+async function startPolling() {
+  let attempts = 0;
+  const findRun = async () => {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${REPO}/actions/runs?per_page=5`,
+        { headers: ghHeaders() }
+      );
+      const data = await res.json();
+      const runs = data.workflow_runs || [];
+      const recent = runs.find(r => r.event === 'workflow_dispatch' &&
+        (r.status === 'in_progress' || r.status === 'queued') &&
+        (Date.now() - new Date(r.created_at).getTime()) < 3 * 60 * 1000);
+
+      if (recent) {
+        currentRunId = recent.id;
+        setStatus('running', 'Pipeline is running on GitHub...');
+        pollSteps();
+        return;
+      }
+      attempts++;
+      if (attempts < 20) setTimeout(findRun, 4000);
+      else setStatus('failed', 'Could not find active run. Check GitHub Actions manually.');
+    } catch (e) {
+      attempts++;
+      if (attempts < 20) setTimeout(findRun, 4000);
+    }
+  };
+  findRun();
+}
+
+async function pollSteps() {
+  const fetchSteps = async () => {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${REPO}/actions/runs/${currentRunId}/jobs`,
+        { headers: ghHeaders() }
+      );
+      const data = await res.json();
+      const jobs = data.jobs || [];
+      if (!jobs.length) { setTimeout(fetchSteps, 4000); return; }
+
+      const job = jobs[0];
+      const steps = job.steps || [];
+      renderTimeline(steps);
+
+      if (job.status === 'completed') {
+        if (job.conclusion === 'success') {
+          setStatus('success', '🎉 Reel posted to @blackman_officialpage!');
+          document.getElementById('btnText').textContent = '▶  Post Reel Now';
+          document.getElementById('spinner').style.display = 'none';
+          document.getElementById('runBtn').classList.remove('loading');
+          document.getElementById('runBtn').disabled = false;
+        } else {
+          setStatus('failed', `Pipeline failed (${job.conclusion}). Check GitHub logs.`);
+          resetBtn();
+        }
+        return;
+      }
+
+      setTimeout(fetchSteps, 5000);
+    } catch (e) {
+      setTimeout(fetchSteps, 8000);
+    }
+  };
+  fetchSteps();
+}
+
+function renderTimeline(steps) {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  tl.classList.add('show');
+
+  const filteredSteps = steps.filter(s =>
+    !s.name.toLowerCase().includes('post checkout') &&
+    !s.name.toLowerCase().includes('post setup')
+  );
+
+  filteredSteps.forEach(step => {
+    const meta = STEP_LABELS[step.name] || { icon: '🔧', label: step.name };
+    let cls = '';
+    let statusText = 'Waiting...';
+
+    if (step.status === 'completed') {
+      cls = step.conclusion === 'success' ? 'done' : 'failed';
+      statusText = step.conclusion === 'success' ? 'Completed' : 'Failed';
+    } else if (step.status === 'in_progress') {
+      cls = 'active';
+      statusText = 'Running...';
+    }
+
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <div class="tl-icon ${cls}">${meta.icon}</div>
+      <div class="tl-info">
+        <div class="tl-name ${cls}">${meta.label}</div>
+        <div class="tl-status ${cls}">${statusText}</div>
+      </div>
+    `;
+    tl.appendChild(item);
+  });
+}
+
+function clearTimeline() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  tl.classList.remove('show');
+}
+
+function setStatus(type, msg) {
+  const bar = document.getElementById('statusBar');
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusMsg');
+  bar.className = 'status-bar show ' + type;
+  dot.className = 'status-dot' + (type === 'running' ? ' pulse' : '');
+  text.textContent = msg;
+}
+
+function resetBtn() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = false;
+  btn.classList.remove('loading');
+  document.getElementById('btnText').textContent = '▶  Post Reel Now';
+  document.getElementById('spinner').style.display = 'none';
+}
+</script>
+</body>
+</html>
