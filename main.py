@@ -975,7 +975,8 @@ def post_to_buffer(video_path: str, caption: str) -> bool:
             print(f"  -> Buffer error (attempt {attempt+1}/3): {e}")
             time.sleep(3)
 
-    return True
+    print("  -> [ERROR] Failed to publish post to Buffer after 3 attempts.")
+    return False
 
 
 # ==============================================================================
@@ -1019,10 +1020,12 @@ def main():
 
     # Step 3: Publish to Instagram via Buffer
     published = post_to_buffer(rendered_file, content["caption"])
+    if not published:
+        print("\n❌ Pipeline Failed: Video rendered but could not be published to Instagram via Buffer.")
+        sys.exit(1)
 
     # Step 4: Asset cleanup
-    if published:
-        cleanup_workspace()
+    cleanup_workspace()
 
     print("\n🎉 Pipeline Execution Completed Successfully for Blackman.in!")
 
